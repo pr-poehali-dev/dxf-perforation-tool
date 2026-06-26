@@ -29,6 +29,7 @@ const Index = () => {
   const [boardWidth, setBoardWidth] = useState(600);
   const [boardHeight, setBoardHeight] = useState(400);
   const [gcodeSettings, setGcodeSettings] = useState<GCodeSettings>(DEFAULT_GCODE);
+  const [showGcodePath, setShowGcodePath] = useState(false);
   const [result, setResult] = useState<PerfoResult | null>(null);
   const [zoom, setZoom] = useState(1);
 
@@ -137,7 +138,64 @@ const Index = () => {
     ctx.strokeStyle = 'rgba(249,158,55,0.6)';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, cv.width, cv.height);
-  }, [result, zoom, settings.spacing]);
+
+    // G-code траектория
+    if (showGcodePath && result.holes.length > 0) {
+      const toolR = Math.max(0.01, (gcodeSettings.toolDiameter) / 2);
+
+      // линии перемещения (G0 — быстрый ход)
+      ctx.strokeStyle = 'rgba(251,191,36,0.55)';
+      ctx.lineWidth = Math.max(1, scale * 0.15);
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      result.holes.forEach((h) => {
+        const tR = Math.max(0.01, (h.d - gcodeSettings.toolDiameter) / 2);
+        const sx = (h.x + tR) * scale;
+        const sy = h.y * scale;
+        ctx.lineTo(sx, sy);
+        ctx.moveTo(sx, sy);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // траектория фрезы на каждом отверстии (окружность радиуса tR)
+      result.holes.forEach((h, i) => {
+        const tR = Math.max(0.01, (h.d - gcodeSettings.toolDiameter) / 2);
+
+        // окружность траектории
+        ctx.beginPath();
+        ctx.arc(h.x * scale, h.y * scale, tR * scale, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(251,146,60,0.75)';
+        ctx.lineWidth = Math.max(1, scale * 0.2);
+        ctx.stroke();
+
+        // диаметр инструмента (пунктир)
+        ctx.beginPath();
+        ctx.arc(h.x * scale, h.y * scale, toolR * scale, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(251,146,60,0.25)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // номер отверстия (каждые 5)
+        if (i % 5 === 0 && scale > 0.8) {
+          ctx.fillStyle = 'rgba(251,191,36,0.9)';
+          ctx.font = `bold ${Math.max(8, scale * 3)}px JetBrains Mono, monospace`;
+          ctx.textAlign = 'center';
+          ctx.fillText(`${i + 1}`, h.x * scale, (h.y - h.d / 2 - 1.5) * scale);
+        }
+      });
+
+      // начало координат — крест
+      ctx.strokeStyle = 'rgba(251,191,36,0.9)';
+      ctx.lineWidth = 2;
+      const cs = Math.max(8, scale * 4);
+      ctx.beginPath(); ctx.moveTo(-cs, 0); ctx.lineTo(cs, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -cs); ctx.lineTo(0, cs); ctx.stroke();
+    }
+  }, [result, zoom, settings.spacing, showGcodePath, gcodeSettings]);
 
   useEffect(() => {
     draw();
@@ -512,6 +570,25 @@ const Index = () => {
               >
                 <Icon name="ArrowUpDown" size={14} />
                 По длине
+              </Button>
+
+              <div className="w-px h-5 bg-border mx-1" />
+
+              {/* Предпросмотр G-code */}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!result}
+                onClick={() => setShowGcodePath((v) => !v)}
+                className={`gap-1.5 text-xs px-2 transition-all ${
+                  showGcodePath
+                    ? 'text-amber-400 bg-amber-400/10 hover:bg-amber-400/15'
+                    : 'text-muted-foreground hover:text-amber-400'
+                }`}
+                title="Показать траекторию G-code"
+              >
+                <Icon name="Route" size={14} />
+                Траектория ЧПУ
               </Button>
             </div>
             {result && (
