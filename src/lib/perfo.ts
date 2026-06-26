@@ -59,6 +59,8 @@ export function shapeVertices(shape: HoleShape, cx: number, cy: number, d: numbe
 }
 
 // Реальная генерация перфорации по яркости пикселей изображения.
+// Алгоритм: нормализация гистограммы — реальный диапазон яркостей
+// растягивается на весь диапазон min..max отверстий для максимальной чёткости.
 export function generatePerforation(
   img: HTMLImageElement,
   s: PerfoSettings,
@@ -69,7 +71,7 @@ export function generatePerforation(
   const cols = Math.max(2, Math.floor(boardWidthMm / s.spacing));
   const rows = Math.max(2, Math.floor(boardHeightMm / s.spacing));
 
-  // Рендерим изображение в маленький canvas размером сетки
+  // Рендерим изображение в canvas размером сетки
   const cv = document.createElement('canvas');
   cv.width = cols;
   cv.height = rows;
@@ -77,13 +79,37 @@ export function generatePerforation(
   ctx.drawImage(img, 0, 0, cols, rows);
   const data = ctx.getImageData(0, 0, cols, rows).data;
 
+  const total = cols * rows;
+
+  // Шаг 1: собираем все значения яркости
+  const lums = new Float32Array(total);
+  for (let n = 0; n < total; n++) {
+    const i = n * 4;
+    lums[n] = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+  }
+
+  // Шаг 2: гистограммное выравнивание (histogram equalization)
+  // Строим CDF и нормализуем — каждый пиксель получает ранг в диапазоне [0..1]
+  const sorted = Float32Array.from(lums).sort();
+  const equalized = new Float32Array(total);
+  for (let n = 0; n < total; n++) {
+    // бинарный поиск позиции в отсортированном массиве = ранг
+    let lo = 0, hi = total - 1;
+    const val = lums[n];
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (sorted[mid] < val) lo = mid + 1; else hi = mid;
+    }
+    equalized[n] = lo / (total - 1);
+  }
+
+  // Шаг 3: дополнительная гамма-коррекция поверх выравнивания
   const holes: Hole[] = [];
   for (let r = 0; r < rows; r++) {
     const offset = s.stagger && r % 2 === 1 ? s.spacing / 2 : 0;
     for (let c = 0; c < cols; c++) {
-      const i = (r * cols + c) * 4;
-      const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
-      let v = s.invert ? lum : 1 - lum;
+      const n = r * cols + c;
+      let v = s.invert ? equalized[n] : 1 - equalized[n];
       v = Math.pow(Math.min(1, Math.max(0, v)), 1 / s.sensitivity);
       const d = s.minHole + v * (s.maxHole - s.minHole);
       if (d < s.threshold) continue;
