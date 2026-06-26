@@ -197,6 +197,20 @@ export function toPDF(result: PerfoResult): void {
   };
 }
 
+// Экспорт в CSV для ЧПУ-станков.
+// Колонки: №, X (мм), Y (мм), Диаметр (мм), Радиус (мм), Форма
+export function toCSV(result: PerfoResult): string {
+  const lines: string[] = [
+    `# PerfoStudio — координаты отверстий`,
+    `# Лист: ${result.widthMm} x ${result.heightMm} мм | Отверстий: ${result.holes.length} | Форма: ${result.shape}`,
+    `N;X_mm;Y_mm;Diameter_mm;Radius_mm;Shape`,
+  ];
+  result.holes.forEach((h, i) => {
+    lines.push(`${i + 1};${h.x.toFixed(3)};${h.y.toFixed(3)};${h.d.toFixed(3)};${(h.d / 2).toFixed(3)};${result.shape}`);
+  });
+  return lines.join('\r\n');
+}
+
 export function download(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);

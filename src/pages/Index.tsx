@@ -15,6 +15,7 @@ import {
   toDXF,
   toSVG,
   toPDF,
+  toCSV,
   download,
 } from '@/lib/perfo';
 
@@ -155,6 +156,12 @@ const Index = () => {
     toast.success(`PDF ${result.widthMm}×${result.heightMm} мм, масштаб 1:1`);
   };
 
+  const exportCSV = () => {
+    if (!result) return;
+    download('perforation.csv', toCSV(result), 'text/csv;charset=utf-8;');
+    toast.success(`CSV экспортирован — ${result.holes.length} строк для ЧПУ`);
+  };
+
   // Вписать по ширине viewport
   const fitWidth = () => {
     if (!result || !viewportRef.current) return;
@@ -199,6 +206,9 @@ const Index = () => {
           </Button>
           <Button onClick={exportPDF} variant="secondary" disabled={!result} className="gap-2">
             <Icon name="Printer" size={16} /> PDF 1:1
+          </Button>
+          <Button onClick={exportCSV} variant="secondary" disabled={!result} className="gap-2">
+            <Icon name="Table2" size={16} /> CSV
           </Button>
           <Button onClick={exportDXF} disabled={!result} className="gap-2 font-semibold">
             <Icon name="Download" size={16} /> Экспорт DXF
