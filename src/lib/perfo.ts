@@ -103,6 +103,14 @@ export function generatePerforation(
     equalized[n] = lo / (total - 1);
   }
 
+  // Максимально допустимый диаметр — чтобы отверстия не касались соседних.
+  // При шахматном расположении минимальное расстояние между центрами — диагональ.
+  const maxSafe = s.stagger
+    ? Math.sqrt(s.spacing ** 2 + (s.spacing / 2) ** 2) - 0.1
+    : s.spacing - 0.1;
+  const dMax = Math.min(s.maxHole, maxSafe);
+  const dMin = Math.min(s.minHole, dMax);
+
   // Шаг 3: дополнительная гамма-коррекция поверх выравнивания
   const holes: Hole[] = [];
   for (let r = 0; r < rows; r++) {
@@ -111,7 +119,7 @@ export function generatePerforation(
       const n = r * cols + c;
       let v = s.invert ? equalized[n] : 1 - equalized[n];
       v = Math.pow(Math.min(1, Math.max(0, v)), 1 / s.sensitivity);
-      const d = s.minHole + v * (s.maxHole - s.minHole);
+      const d = dMin + v * (dMax - dMin);
       if (d < s.threshold) continue;
       const x = c * s.spacing + s.spacing / 2 + offset;
       if (x > boardWidthMm) continue;
