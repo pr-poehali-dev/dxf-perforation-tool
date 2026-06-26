@@ -31,6 +31,7 @@ const Index = () => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   const pushHistory = (next: PerfoSettings) => {
     const trimmed = history.slice(0, hIndex + 1);
@@ -145,6 +146,22 @@ const Index = () => {
     if (!result) return;
     download('perforation.svg', toSVG(result), 'image/svg+xml');
     toast.success('Экспортировано в SVG');
+  };
+
+  // Вписать по ширине viewport
+  const fitWidth = () => {
+    if (!result || !viewportRef.current) return;
+    const vw = viewportRef.current.clientWidth - 64;
+    const z = vw / (result.widthMm * 2);
+    setZoom(Math.max(0.1, Math.round(z * 100) / 100));
+  };
+
+  // Вписать по высоте viewport
+  const fitHeight = () => {
+    if (!result || !viewportRef.current) return;
+    const vh = viewportRef.current.clientHeight - 64;
+    const z = vh / (result.heightMm * 2);
+    setZoom(Math.max(0.1, Math.round(z * 100) / 100));
   };
 
   return (
@@ -389,15 +406,43 @@ const Index = () => {
           {/* Toolbar */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/30 backdrop-blur-sm">
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}>
+              <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.max(0.1, Math.round((z - 0.25) * 100) / 100))}>
                 <Icon name="ZoomOut" size={18} />
               </Button>
               <span className="font-mono text-sm w-14 text-center">{Math.round(zoom * 100)}%</span>
-              <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.min(4, z + 0.25))}>
+              <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.min(8, Math.round((z + 0.25) * 100) / 100))}>
                 <Icon name="ZoomIn" size={18} />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setZoom(1)} title="Сбросить">
+              <Button variant="ghost" size="icon" onClick={() => setZoom(1)} title="100%">
                 <Icon name="Maximize" size={18} />
+              </Button>
+
+              <div className="w-px h-5 bg-border mx-1" />
+
+              {/* Масштабирование по ширине */}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!result}
+                onClick={fitWidth}
+                title="Вписать по ширине"
+                className="gap-1.5 text-xs text-muted-foreground hover:text-primary px-2"
+              >
+                <Icon name="ArrowLeftRight" size={14} />
+                По ширине
+              </Button>
+
+              {/* Масштабирование по высоте */}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!result}
+                onClick={fitHeight}
+                title="Вписать по высоте"
+                className="gap-1.5 text-xs text-muted-foreground hover:text-primary px-2"
+              >
+                <Icon name="ArrowUpDown" size={14} />
+                По длине
               </Button>
             </div>
             {result && (
@@ -410,7 +455,7 @@ const Index = () => {
           </div>
 
           {/* Canvas */}
-          <div className="flex-1 overflow-auto p-8 flex items-center justify-center">
+          <div ref={viewportRef} className="flex-1 overflow-auto p-8 flex items-center justify-center">
             {result ? (
               <canvas
                 ref={canvasRef}
