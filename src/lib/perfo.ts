@@ -63,11 +63,8 @@ export function generatePerforation(
   img: HTMLImageElement,
   s: PerfoSettings,
   boardWidthMm = 600,
-  boardHeightMm?: number
+  boardHeightMm = 400
 ): PerfoResult {
-  if (!boardHeightMm) {
-    boardHeightMm = boardWidthMm * (img.height / img.width);
-  }
 
   const cols = Math.max(2, Math.floor(boardWidthMm / s.spacing));
   const rows = Math.max(2, Math.floor(boardHeightMm / s.spacing));

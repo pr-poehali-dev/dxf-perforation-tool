@@ -22,7 +22,7 @@ const Index = () => {
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [settings, setSettings] = useState<PerfoSettings>(DEFAULT_SETTINGS);
   const [boardWidth, setBoardWidth] = useState(600);
-  const [boardHeight, setBoardHeight] = useState<number | null>(null);
+  const [boardHeight, setBoardHeight] = useState(400);
   const [result, setResult] = useState<PerfoResult | null>(null);
   const [zoom, setZoom] = useState(1);
 
@@ -77,7 +77,7 @@ const Index = () => {
   // Пересчёт перфорации
   useEffect(() => {
     if (!img) return;
-    const res = generatePerforation(img, settings, boardWidth, boardHeight ?? undefined);
+    const res = generatePerforation(img, settings, boardWidth, boardHeight);
     setResult(res);
   }, [img, settings, boardWidth, boardHeight]);
 
@@ -222,40 +222,50 @@ const Index = () => {
                 <Input
                   type="number"
                   value={boardWidth}
-                  onChange={(e) => setBoardWidth(Math.max(50, Number(e.target.value)))}
+                  min={50}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (v >= 50) setBoardWidth(v);
+                  }}
                   className="font-mono"
                 />
               </Field>
-              <Field label={
-                <span className="flex items-center justify-between w-full">
-                  Длина, мм
-                  {boardHeight !== null && (
-                    <button
-                      onClick={() => setBoardHeight(null)}
-                      className="text-[10px] text-primary hover:text-primary/70 transition-colors font-medium"
-                    >
-                      авто
-                    </button>
-                  )}
-                </span>
-              }>
+              <Field label="Длина, мм">
                 <Input
                   type="number"
-                  value={boardHeight ?? (img ? Math.round(boardWidth * (img.height / img.width)) : '')}
-                  placeholder="авто"
+                  value={boardHeight}
+                  min={50}
                   onChange={(e) => {
                     const v = Number(e.target.value);
-                    setBoardHeight(v > 0 ? Math.max(50, v) : null);
+                    if (v >= 50) setBoardHeight(v);
                   }}
                   className="font-mono"
                 />
               </Field>
             </div>
-            {boardHeight !== null && img && (
-              <p className="text-[11px] text-accent font-mono mt-2">
-                ⚠ Пропорции изображения изменены
-              </p>
-            )}
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {[
+                { label: 'A4', w: 210, h: 297 },
+                { label: 'A3', w: 297, h: 420 },
+                { label: 'A2', w: 420, h: 594 },
+                { label: 'A1', w: 594, h: 841 },
+                { label: 'A0', w: 841, h: 1189 },
+                { label: '1000×2000', w: 1000, h: 2000 },
+                { label: '1500×3000', w: 1500, h: 3000 },
+              ].map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => { setBoardWidth(p.w); setBoardHeight(p.h); }}
+                  className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-all ${
+                    boardWidth === p.w && boardHeight === p.h
+                      ? 'border-primary text-primary bg-primary/10'
+                      : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </section>
 
           {/* Форма отверстий */}
