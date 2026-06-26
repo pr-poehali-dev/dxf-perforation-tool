@@ -62,10 +62,12 @@ export function shapeVertices(shape: HoleShape, cx: number, cy: number, d: numbe
 export function generatePerforation(
   img: HTMLImageElement,
   s: PerfoSettings,
-  boardWidthMm = 600
+  boardWidthMm = 600,
+  boardHeightMm?: number
 ): PerfoResult {
-  const aspect = img.height / img.width;
-  const boardHeightMm = boardWidthMm * aspect;
+  if (!boardHeightMm) {
+    boardHeightMm = boardWidthMm * (img.height / img.width);
+  }
 
   const cols = Math.max(2, Math.floor(boardWidthMm / s.spacing));
   const rows = Math.max(2, Math.floor(boardHeightMm / s.spacing));

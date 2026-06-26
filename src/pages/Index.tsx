@@ -22,6 +22,7 @@ const Index = () => {
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [settings, setSettings] = useState<PerfoSettings>(DEFAULT_SETTINGS);
   const [boardWidth, setBoardWidth] = useState(600);
+  const [boardHeight, setBoardHeight] = useState<number | null>(null);
   const [result, setResult] = useState<PerfoResult | null>(null);
   const [zoom, setZoom] = useState(1);
 
@@ -76,9 +77,9 @@ const Index = () => {
   // Пересчёт перфорации
   useEffect(() => {
     if (!img) return;
-    const res = generatePerforation(img, settings, boardWidth);
+    const res = generatePerforation(img, settings, boardWidth, boardHeight ?? undefined);
     setResult(res);
-  }, [img, settings, boardWidth]);
+  }, [img, settings, boardWidth, boardHeight]);
 
   // Отрисовка
   const draw = useCallback(() => {
@@ -216,14 +217,45 @@ const Index = () => {
           {/* Размер листа */}
           <section>
             <SectionTitle icon="Ruler" text="Размер листа" />
-            <Field label="Ширина листа, мм">
-              <Input
-                type="number"
-                value={boardWidth}
-                onChange={(e) => setBoardWidth(Math.max(50, Number(e.target.value)))}
-                className="font-mono"
-              />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Ширина, мм">
+                <Input
+                  type="number"
+                  value={boardWidth}
+                  onChange={(e) => setBoardWidth(Math.max(50, Number(e.target.value)))}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label={
+                <span className="flex items-center justify-between w-full">
+                  Длина, мм
+                  {boardHeight !== null && (
+                    <button
+                      onClick={() => setBoardHeight(null)}
+                      className="text-[10px] text-primary hover:text-primary/70 transition-colors font-medium"
+                    >
+                      авто
+                    </button>
+                  )}
+                </span>
+              }>
+                <Input
+                  type="number"
+                  value={boardHeight ?? (img ? Math.round(boardWidth * (img.height / img.width)) : '')}
+                  placeholder="авто"
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setBoardHeight(v > 0 ? Math.max(50, v) : null);
+                  }}
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+            {boardHeight !== null && img && (
+              <p className="text-[11px] text-accent font-mono mt-2">
+                ⚠ Пропорции изображения изменены
+              </p>
+            )}
           </section>
 
           {/* Форма отверстий */}
@@ -369,9 +401,9 @@ const SectionTitle = ({ icon, text }: { icon: string; text: string }) => (
   </div>
 );
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+const Field = ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
   <div className="space-y-1.5">
-    <label className="text-sm text-muted-foreground">{label}</label>
+    <label className="text-sm text-muted-foreground flex items-center justify-between">{label}</label>
     {children}
   </div>
 );
