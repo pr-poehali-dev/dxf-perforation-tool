@@ -311,7 +311,12 @@ const Index = () => {
               className="group cursor-pointer rounded-xl border-2 border-dashed border-border hover:border-primary/60 transition-colors p-4 text-center"
             >
               {imgSrc ? (
-                <img src={imgSrc} alt="preview" className="w-full h-32 object-contain rounded-md" />
+                <img
+                  src={imgSrc}
+                  alt="preview"
+                  className="w-full h-32 object-contain rounded-md"
+                  style={{ filter: 'grayscale(1) contrast(1.1)' }}
+                />
               ) : (
                 <div className="py-6 text-muted-foreground group-hover:text-primary transition-colors">
                   <Icon name="ImagePlus" size={28} className="mx-auto mb-2" />
