@@ -211,6 +211,75 @@ export function toCSV(result: PerfoResult): string {
   return lines.join('\r\n');
 }
 
+// Настройки G-code
+export interface GCodeSettings {
+  feedRate: number;      // подача XY, мм/мин
+  plungeRate: number;    // подача по Z (врезание), мм/мин
+  safeZ: number;         // безопасная высота Z, мм
+  cutDepth: number;      // глубина фрезерования, мм
+  toolDiameter: number;  // диаметр инструмента, мм
+  spindleSpeed: number;  // обороты шпинделя, RPM
+}
+
+export const DEFAULT_GCODE: GCodeSettings = {
+  feedRate: 1000,
+  plungeRate: 300,
+  safeZ: 5,
+  cutDepth: -3,
+  toolDiameter: 3,
+  spindleSpeed: 12000,
+};
+
+// G-code для фрезерного ЧПУ.
+// Каждое отверстие: подход → врезание → круговая фреза (G2) → подъём.
+export function toGCode(result: PerfoResult, g: GCodeSettings): string {
+  const lines: string[] = [];
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  // Заголовок
+  lines.push(
+    `; PerfoStudio — G-code export`,
+    `; Date: ${now}`,
+    `; Sheet: ${result.widthMm} x ${result.heightMm} mm`,
+    `; Holes: ${result.holes.length} | Shape: ${result.shape}`,
+    `; Tool diameter: ${g.toolDiameter} mm`,
+    `; Cut depth: ${g.cutDepth} mm | Feed: ${g.feedRate} mm/min`,
+    ``,
+    `G21        ; мм`,
+    `G90        ; абсолютные координаты`,
+    `G17        ; плоскость XY`,
+    `M3 S${g.spindleSpeed} ; шпиндель ВКЛ`,
+    `G4 P2      ; пауза 2 сек`,
+    `G0 Z${g.safeZ.toFixed(3)} ; безопасная высота`,
+    ``,
+  );
+
+  result.holes.forEach((h, i) => {
+    const r = Math.max(0.01, (h.d - g.toolDiameter) / 2); // радиус траектории
+    const startX = (h.x + r).toFixed(3);
+    const cy = h.y.toFixed(3);
+    const cx = h.x.toFixed(3);
+
+    lines.push(`; Отверстие #${i + 1}  D=${h.d}мм  X=${cx} Y=${cy}`);
+    lines.push(`G0 X${startX} Y${cy}`);           // быстрый подход
+    lines.push(`G1 Z${g.cutDepth.toFixed(3)} F${g.plungeRate} ; врезание`);
+    if (r > 0.01) {
+      lines.push(`G2 X${startX} Y${cy} I${(-r).toFixed(3)} J0.000 F${g.feedRate} ; круговая фреза`);
+    }
+    lines.push(`G0 Z${g.safeZ.toFixed(3)}`);      // подъём
+    lines.push(``);
+  });
+
+  lines.push(
+    `G0 Z${g.safeZ.toFixed(3)}`,
+    `G0 X0 Y0   ; парковка`,
+    `M5         ; шпиндель ВЫКЛ`,
+    `M30        ; конец программы`,
+  );
+
+  return lines.join('\r\n');
+}
+
 export function download(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);

@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import {
   DEFAULT_SETTINGS,
+  DEFAULT_GCODE,
+  GCodeSettings,
   PerfoSettings,
   PerfoResult,
   HoleShape,
@@ -16,6 +18,7 @@ import {
   toSVG,
   toPDF,
   toCSV,
+  toGCode,
   download,
 } from '@/lib/perfo';
 
@@ -25,6 +28,7 @@ const Index = () => {
   const [settings, setSettings] = useState<PerfoSettings>(DEFAULT_SETTINGS);
   const [boardWidth, setBoardWidth] = useState(600);
   const [boardHeight, setBoardHeight] = useState(400);
+  const [gcodeSettings, setGcodeSettings] = useState<GCodeSettings>(DEFAULT_GCODE);
   const [result, setResult] = useState<PerfoResult | null>(null);
   const [zoom, setZoom] = useState(1);
 
@@ -162,6 +166,12 @@ const Index = () => {
     toast.success(`CSV экспортирован — ${result.holes.length} строк для ЧПУ`);
   };
 
+  const exportGCode = () => {
+    if (!result) return;
+    download('perforation.nc', toGCode(result, gcodeSettings), 'text/plain');
+    toast.success(`G-code экспортирован — ${result.holes.length} отверстий`);
+  };
+
   // Вписать по ширине viewport
   const fitWidth = () => {
     if (!result || !viewportRef.current) return;
@@ -209,6 +219,9 @@ const Index = () => {
           </Button>
           <Button onClick={exportCSV} variant="secondary" disabled={!result} className="gap-2">
             <Icon name="Table2" size={16} /> CSV
+          </Button>
+          <Button onClick={exportGCode} variant="secondary" disabled={!result} className="gap-2">
+            <Icon name="Terminal" size={16} /> G-code
           </Button>
           <Button onClick={exportDXF} disabled={!result} className="gap-2 font-semibold">
             <Icon name="Download" size={16} /> Экспорт DXF
@@ -418,6 +431,42 @@ const Index = () => {
               <span className="text-sm text-muted-foreground">Инверсия яркости</span>
               <Switch checked={settings.invert} onCheckedChange={(v) => update({ invert: v })} />
             </div>
+          </section>
+
+          {/* G-code настройки */}
+          <section>
+            <SectionTitle icon="Terminal" text="Настройки G-code" />
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { label: 'Подача XY, мм/мин', key: 'feedRate', min: 10, max: 5000, step: 10 },
+                  { label: 'Врезание Z, мм/мин', key: 'plungeRate', min: 10, max: 2000, step: 10 },
+                  { label: 'Безопасная Z, мм', key: 'safeZ', min: 1, max: 50, step: 0.5 },
+                  { label: 'Глубина реза, мм', key: 'cutDepth', min: -30, max: -0.1, step: 0.1 },
+                  { label: 'Диаметр фрезы, мм', key: 'toolDiameter', min: 0.5, max: 20, step: 0.1 },
+                  { label: 'Шпиндель, RPM', key: 'spindleSpeed', min: 1000, max: 30000, step: 500 },
+                ] as { label: string; key: keyof GCodeSettings; min: number; max: number; step: number }[]
+              ).map(({ label, key, min, max, step }) => (
+                <Field key={key} label={label}>
+                  <Input
+                    type="number"
+                    value={gcodeSettings[key]}
+                    min={min}
+                    max={max}
+                    step={step}
+                    onChange={(e) => setGcodeSettings((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
+                    className="font-mono text-sm"
+                  />
+                </Field>
+              ))}
+            </div>
+            <Button
+              onClick={exportGCode}
+              disabled={!result}
+              className="w-full mt-3 gap-2"
+            >
+              <Icon name="Terminal" size={15} /> Экспорт G-code (.nc)
+            </Button>
           </section>
         </aside>
 
