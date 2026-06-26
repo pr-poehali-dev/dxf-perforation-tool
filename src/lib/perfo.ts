@@ -152,6 +152,51 @@ export function toSVG(result: PerfoResult): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${result.widthMm}mm" height="${result.heightMm}mm" viewBox="0 0 ${result.widthMm} ${result.heightMm}"><rect width="100%" height="100%" fill="none"/><g fill="black">${shapes}</g></svg>`;
 }
 
+// Экспорт в PDF через печать браузера — реальный масштаб 1:1 в мм.
+export function toPDF(result: PerfoResult): void {
+  const svgContent = toSVG(result);
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>PerfoStudio — ${result.widthMm}×${result.heightMm}мм</title>
+<style>
+  @page {
+    size: ${result.widthMm}mm ${result.heightMm}mm;
+    margin: 0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: ${result.widthMm}mm;
+    height: ${result.heightMm}mm;
+    background: white;
+    overflow: hidden;
+  }
+  svg {
+    display: block;
+    width: ${result.widthMm}mm;
+    height: ${result.heightMm}mm;
+  }
+  @media print {
+    html, body { width: ${result.widthMm}mm; height: ${result.heightMm}mm; }
+  }
+</style>
+</head>
+<body>${svgContent}</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=800,height=600');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => {
+    setTimeout(() => {
+      win.focus();
+      win.print();
+    }, 300);
+  };
+}
+
 export function download(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);

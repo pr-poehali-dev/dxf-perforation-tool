@@ -14,6 +14,7 @@ import {
   shapeVertices,
   toDXF,
   toSVG,
+  toPDF,
   download,
 } from '@/lib/perfo';
 
@@ -148,6 +149,12 @@ const Index = () => {
     toast.success('Экспортировано в SVG');
   };
 
+  const exportPDF = () => {
+    if (!result) return;
+    toPDF(result);
+    toast.success(`PDF ${result.widthMm}×${result.heightMm} мм, масштаб 1:1`);
+  };
+
   // Вписать по ширине viewport
   const fitWidth = () => {
     if (!result || !viewportRef.current) return;
@@ -189,6 +196,9 @@ const Index = () => {
           <div className="w-px h-6 bg-border mx-1" />
           <Button onClick={exportSVG} variant="secondary" disabled={!result} className="gap-2">
             <Icon name="FileImage" size={16} /> SVG
+          </Button>
+          <Button onClick={exportPDF} variant="secondary" disabled={!result} className="gap-2">
+            <Icon name="Printer" size={16} /> PDF 1:1
           </Button>
           <Button onClick={exportDXF} disabled={!result} className="gap-2 font-semibold">
             <Icon name="Download" size={16} /> Экспорт DXF
