@@ -9,7 +9,9 @@ import {
   DEFAULT_SETTINGS,
   PerfoSettings,
   PerfoResult,
+  HoleShape,
   generatePerforation,
+  shapeVertices,
   toDXF,
   toSVG,
   download,
@@ -110,7 +112,16 @@ const Index = () => {
     ctx.fillStyle = '#2dd4bf';
     for (const h of result.holes) {
       ctx.beginPath();
-      ctx.arc(h.x * scale, h.y * scale, (h.d / 2) * scale, 0, Math.PI * 2);
+      if (result.shape === 'circle') {
+        ctx.arc(h.x * scale, h.y * scale, (h.d / 2) * scale, 0, Math.PI * 2);
+      } else {
+        const verts = shapeVertices(result.shape, h.x, h.y, h.d);
+        verts.forEach(([vx, vy], i) => {
+          if (i === 0) ctx.moveTo(vx * scale, vy * scale);
+          else ctx.lineTo(vx * scale, vy * scale);
+        });
+        ctx.closePath();
+      }
       ctx.fill();
     }
 
@@ -213,6 +224,40 @@ const Index = () => {
                 className="font-mono"
               />
             </Field>
+          </section>
+
+          {/* Форма отверстий */}
+          <section>
+            <SectionTitle icon="Shapes" text="Форма отверстий" />
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: 'circle', label: 'Круг', icon: 'Circle' },
+                { id: 'square', label: 'Квадрат', icon: 'Square' },
+                { id: 'hexagon', label: 'Шестигр.', icon: 'Hexagon' },
+              ] as { id: HoleShape; label: string; icon: string }[]).map((sh) => {
+                const active = settings.shape === sh.id;
+                return (
+                  <button
+                    key={sh.id}
+                    onClick={() => update({ shape: sh.id })}
+                    className={`flex flex-col items-center gap-1.5 rounded-lg border py-3 transition-all ${
+                      active
+                        ? 'border-primary bg-primary/15 text-primary shadow-[0_0_14px_hsl(var(--primary)/0.3)]'
+                        : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                    }`}
+                  >
+                    <Icon name={sh.icon} size={20} />
+                    <span className="text-[11px] font-medium">{sh.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between py-3 mt-1">
+              <span className="text-sm text-muted-foreground flex items-center gap-2">
+                <Icon name="LayoutGrid" size={14} className="text-primary" /> Шахматный порядок
+              </span>
+              <Switch checked={settings.stagger} onCheckedChange={(v) => update({ stagger: v })} />
+            </div>
           </section>
 
           {/* Параметры */}
