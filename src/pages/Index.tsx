@@ -217,32 +217,59 @@ const Index = () => {
           {/* Размер листа */}
           <section>
             <SectionTitle icon="Ruler" text="Размер листа" />
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Ширина, мм">
-                <Input
-                  type="number"
-                  value={boardWidth}
-                  min={50}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (v >= 50) setBoardWidth(v);
-                  }}
-                  className="font-mono"
-                />
-              </Field>
-              <Field label="Длина, мм">
-                <Input
-                  type="number"
-                  value={boardHeight}
-                  min={50}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (v >= 50) setBoardHeight(v);
-                  }}
-                  className="font-mono"
-                />
-              </Field>
+
+            {/* Поля + кнопки управления */}
+            <div className="flex items-end gap-2">
+              <div className="grid grid-cols-2 gap-2 flex-1">
+                <Field label="Ширина, мм">
+                  <Input
+                    type="number"
+                    value={boardWidth}
+                    min={50}
+                    onChange={(e) => { const v = Number(e.target.value); if (v >= 50) setBoardWidth(v); }}
+                    className="font-mono"
+                  />
+                </Field>
+                <Field label="Длина, мм">
+                  <Input
+                    type="number"
+                    value={boardHeight}
+                    min={50}
+                    onChange={(e) => { const v = Number(e.target.value); if (v >= 50) setBoardHeight(v); }}
+                    className="font-mono"
+                  />
+                </Field>
+              </div>
+
+              {/* Повернуть ориентацию */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 border border-border hover:border-primary/50 hover:text-primary"
+                title="Повернуть ориентацию"
+                onClick={() => { setBoardWidth(boardHeight); setBoardHeight(boardWidth); }}
+              >
+                <Icon name="RefreshCw" size={16} />
+              </Button>
             </div>
+
+            {/* Подогнать под изображение */}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!img}
+              onClick={() => {
+                if (!img) return;
+                const aspect = img.height / img.width;
+                setBoardHeight(Math.round(boardWidth * aspect));
+                toast.success('Длина подогнана под пропорции изображения');
+              }}
+              className="mt-2 w-full gap-2 border border-border hover:border-primary/50 hover:text-primary text-muted-foreground text-xs"
+            >
+              <Icon name="Scan" size={14} /> Подогнать под изображение
+            </Button>
+
+            {/* Пресеты */}
             <div className="flex flex-wrap gap-1.5 mt-2.5">
               {[
                 { label: 'A4', w: 210, h: 297 },
@@ -257,7 +284,7 @@ const Index = () => {
                   key={p.label}
                   onClick={() => { setBoardWidth(p.w); setBoardHeight(p.h); }}
                   className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-all ${
-                    boardWidth === p.w && boardHeight === p.h
+                    (boardWidth === p.w && boardHeight === p.h) || (boardWidth === p.h && boardHeight === p.w)
                       ? 'border-primary text-primary bg-primary/10'
                       : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
                   }`}
