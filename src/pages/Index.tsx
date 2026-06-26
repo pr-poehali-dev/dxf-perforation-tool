@@ -68,18 +68,69 @@ const Index = () => {
     }
   };
 
+  const [isGrayscale, setIsGrayscale] = useState(false);
+
+  const loadImage = (src: string, grayscale: boolean) => {
+    const image = new Image();
+    image.onload = () => {
+      if (!grayscale) {
+        setImg(image);
+        setImgSrc(src);
+        return;
+      }
+      // Конвертация в ч/б через canvas
+      const cv = document.createElement('canvas');
+      cv.width = image.width;
+      cv.height = image.height;
+      const ctx = cv.getContext('2d')!;
+      ctx.drawImage(image, 0, 0);
+      const imageData = ctx.getImageData(0, 0, cv.width, cv.height);
+      const d = imageData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const lum = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+        d[i] = d[i + 1] = d[i + 2] = lum;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      const bwSrc = cv.toDataURL('image/png');
+      const bwImg = new Image();
+      bwImg.onload = () => {
+        setImg(bwImg);
+        setImgSrc(bwSrc);
+      };
+      bwImg.src = bwSrc;
+    };
+    image.src = src;
+  };
+
   const onFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const image = new Image();
-      image.onload = () => {
-        setImg(image);
-        setImgSrc(e.target?.result as string);
-        toast.success('Изображение загружено');
-      };
-      image.src = e.target?.result as string;
+      const src = e.target?.result as string;
+      setIsGrayscale(false);
+      loadImage(src, false);
+      toast.success('Изображение загружено');
     };
     reader.readAsDataURL(file);
+  };
+
+  // Сохраняем оригинальный src отдельно для конвертации
+  const [originalSrc, setOriginalSrc] = useState<string | null>(null);
+
+  const convertToGrayscale = () => {
+    if (!imgSrc) return;
+    const src = originalSrc ?? imgSrc;
+    setOriginalSrc(src);
+    setIsGrayscale(true);
+    loadImage(src, true);
+    toast.success('Изображение переведено в Ч/Б');
+  };
+
+  const revertToColor = () => {
+    if (!originalSrc) return;
+    setIsGrayscale(false);
+    loadImage(originalSrc, false);
+    setOriginalSrc(null);
+    toast.success('Восстановлено цветное изображение');
   };
 
   // Пересчёт перфорации
@@ -325,6 +376,30 @@ const Index = () => {
                 </div>
               )}
             </div>
+
+            {/* Кнопки конвертации */}
+            {imgSrc && (
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isGrayscale}
+                  onClick={convertToGrayscale}
+                  className="flex-1 gap-1.5 text-xs border border-border hover:border-primary/50 hover:text-primary text-muted-foreground"
+                >
+                  <Icon name="Circle" size={13} /> Ч/Б
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!isGrayscale}
+                  onClick={revertToColor}
+                  className="flex-1 gap-1.5 text-xs border border-border hover:border-primary/50 hover:text-primary text-muted-foreground"
+                >
+                  <Icon name="Palette" size={13} /> Цвет
+                </Button>
+              </div>
+            )}
           </section>
 
           {/* Размер листа */}
